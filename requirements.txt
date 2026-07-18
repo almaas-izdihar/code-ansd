@@ -1,0 +1,5 @@
+# ANSD-minimal (Adaptive Noise-Based Self-Distillation) — CIFAR-100 experiment
+# Env matched to ANSD paper (Tan 2026): PyTorch 2.1.x, Python 3.10
+torch==2.1.0
+torchvision==0.16.0
+numpy>=1.24

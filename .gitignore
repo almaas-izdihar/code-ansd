@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[oc]
+*.egg-info
+.venv/
+venv/
+
+# Data & runtime artifacts
+data/
+*.pth
+*.pt
+*.ckpt
+
+# Experiment outputs (keep dir, ignore contents)
+experiments/*
+!experiments/.gitkeep
+
+# macOS
+.DS_Store
