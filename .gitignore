@@ -17,3 +17,6 @@ experiments/*
 
 # macOS
 .DS_Store
+
+# Training scratch (checkpoints/logs) — push only results/
+models/
