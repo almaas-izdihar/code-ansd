@@ -95,6 +95,7 @@ def accuracy(output, target, topk=(1,)):
 def train(net, criterion_CE, optimizer, scaler, loader, epoch, args):
     net.train()
     top1, losses = AverageMeter(), AverageMeter()
+    m_ce, m_logit, m_feat = AverageMeter(), AverageMeter(), AverageMeter()  # component tracking
     for batch_idx, batch in enumerate(loader):
         inputs, targets = batch[0].cuda(non_blocking=True), batch[1].cuda(non_blocking=True)
         optimizer.zero_grad()
@@ -103,25 +104,33 @@ def train(net, criterion_CE, optimizer, scaler, loader, epoch, args):
                 feats_orig, z_orig = net(inputs, noise=False)
                 feats_noise, z_noise = net(inputs, noise=True, noise_lambda=args.lambda_noise)
                 z_ce = z_noise if args.ce_view == 'noise' else z_orig
-                loss = criterion_CE(z_ce, targets)
-                loss = loss + args.alpha * logit_distillation(z_orig, z_noise, args.T)
-                loss = loss + args.beta * feature_distillation(feats_orig, feats_noise)
+                l_ce = criterion_CE(z_ce, targets)
+                l_logit = logit_distillation(z_orig, z_noise, args.T)
+                l_feat = feature_distillation(feats_orig, feats_noise)
+                loss = l_ce + args.alpha * l_logit + args.beta * l_feat
                 logits_for_acc = z_orig  # clean view = deployed path
+                # track raw (un-weighted) components → diagnose L_feat reduction / β scale, AMP nan
+                m_ce.update(l_ce.item(), inputs.size(0))
+                m_logit.update(float(l_logit), inputs.size(0))
+                m_feat.update(float(l_feat), inputs.size(0))
             else:
                 _, z = net(inputs, noise=False)
                 loss = criterion_CE(z, targets)
                 logits_for_acc = z
+                m_ce.update(loss.item(), inputs.size(0))
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
         losses.update(loss.item(), inputs.size(0))
         top1.update(accuracy(logits_for_acc.data, targets)[0].item(), inputs.size(0))
         progress_bar(epoch, batch_idx, len(loader), args,
-                     'loss: {:.3f} | top1: {:.3f}'.format(losses.avg, top1.avg))
+                     'loss: {:.3f} | ce: {:.3f} | logit: {:.3f} | feat: {:.3f} | top1: {:.3f}'.format(
+                         losses.avg, m_ce.avg, m_logit.avg, m_feat.avg, top1.avg))
     if is_main_process():
         logging.getLogger('train').info(
-            '[Epoch {}] [ANSD {}] [train_loss {:.3f}] [train_top1 {:.3f}]'.format(
-                epoch, args.ANSD, losses.avg, top1.avg))
+            '[Epoch {}] [ANSD {}] [train_loss {:.3f}] [L_CE {:.3f}] [L_logit {:.3f}] '
+            '[L_feat {:.3f}] [train_top1 {:.3f}]'.format(
+                epoch, args.ANSD, losses.avg, m_ce.avg, m_logit.avg, m_feat.avg, top1.avg))
 
 
 def validate(net, criterion_CE, loader, epoch, args):
