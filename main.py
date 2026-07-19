@@ -22,6 +22,7 @@ from models.resnet import get_network
 from loss.ansd_loss import logit_distillation, feature_distillation
 from utils.AverageMeter import AverageMeter
 from utils.metric import metric_ece_aurc_eaurc
+from utils.quality import entropy_superclass
 from utils.color import Colorer
 from utils.dir_maker import DirectroyMaker
 from utils.etc import progress_bar, is_main_process, save_on_master, paser_config_save, set_logging_defaults
@@ -151,9 +152,11 @@ def validate(net, criterion_CE, loader, epoch, args):
                          'val_loss: {:.3f} | val_top1: {:.3f}'.format(losses.avg, top1.avg))
     if is_main_process():
         ece, aurc, eaurc = metric_ece_aurc_eaurc(confidences, targets_list, bin_size=0.1)
+        ent, sup = entropy_superclass(confidences)   # Stage 1 soft-label quality
         logging.getLogger('val').info(
-            '[Epoch {}] [val_loss {:.3f}] [val_top1 {:.3f}] [val_top5 {:.3f}] [ECE {:.3f}]'.format(
-                epoch, losses.avg, top1.avg, top5.avg, ece))
+            '[Epoch {}] [val_loss {:.3f}] [val_top1 {:.3f}] [val_top5 {:.3f}] [ECE {:.3f}] '
+            '[ENT {:.4f}] [SUPCOH {:.4f}]'.format(
+                epoch, losses.avg, top1.avg, top5.avg, ece, ent, sup))
     return top1.avg
 
 
