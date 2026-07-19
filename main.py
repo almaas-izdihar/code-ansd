@@ -46,9 +46,9 @@ def parse_args():
     p.add_argument('--alpha', default=1.0, type=float, help='logit distillation weight')
     p.add_argument('--beta', default=1.0, type=float, help='feature distillation weight')
     p.add_argument('--T', default=1.0, type=float, help='distillation temperature (paper searches {1,2})')
-    p.add_argument('--ce_view', default='noise', choices=['noise', 'clean'],
-                   help='which view gets CE. PAPER AMBIGUOUS: Eq1=student(noise)+teacher-frozen '
-                        '=> default noise; validate at Stage 0a, try clean if 76.56 misses.')
+    p.add_argument('--ce_view', default='clean', choices=['noise', 'clean'],
+                   help='which view gets CE. Paper Fig 1 + Eq1(preliminaries, noise-free) => CLEAN '
+                        '(teacher). Both reproduce ~76 (clean 75.99 / noise 76.50); clean is faithful.')
     # --- infra ---
     p.add_argument('--data_type', default='cifar100', type=str)
     p.add_argument('--data_path', default='../../Cifar100', type=str)
